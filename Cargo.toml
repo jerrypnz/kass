@@ -1,0 +1,11 @@
+[package]
+name = "cql"
+version = "0.1.0"
+authors = ["Jerry Peng <pr2jerry@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cdrs = "2"
+clap = "2.33.0"
