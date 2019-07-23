@@ -10,16 +10,24 @@ use cdrs::frame::frame_result::{ColType, RowsMetadata};
 use cdrs::types::rows::Row;
 use cdrs::types::IntoRustByIndex;
 
-// TODO Replace `Into` with a different trait so that we can implement
-// it for other CDRS types like Udt, List, Map etc.
+pub trait ToJsonValue {
+    fn to_json(self) -> Value;
+}
+
+impl<T: Into<Value>> ToJsonValue for T {
+    fn to_json(self) -> Value {
+        self.into()
+    }
+}
+
 fn column_to_json<R, T>(i: usize, row: &T) -> Result<Value>
 where
-    R: Into<Value>,
+    R: ToJsonValue,
     T: IntoRustByIndex<R>,
 {
     let value = row.get_by_index(i)?;
     match value {
-        Some(value) => Ok(value.into()),
+        Some(value) => Ok(value.to_json()),
         None => Ok(Value::Null),
     }
 }

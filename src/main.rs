@@ -32,11 +32,6 @@ fn query(session: &CurrentSession, cql: &str) -> Result<()> {
     match rows {
         Some(rows) => {
             let meta = meta.unwrap();
-            // println!(
-            //     "Query returned {} rows, {} columns",
-            //     rows.len(),
-            //     meta.columns_count
-            // ) ;
             for row in rows {
                 let json = json::row_to_json(&meta, &row)?;
                 let json_str = serde_json::to_string(&json).expect("failed to print json");
