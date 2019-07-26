@@ -1,11 +1,9 @@
-extern crate serde_json;
-
 use std::convert::Into;
 
 use serde_json::map::Map;
 use serde_json::Value;
 
-use cdrs::error::Result;
+use crate::errors::AppResult;
 use cdrs::frame::frame_result::{ColType, RowsMetadata};
 use cdrs::types::rows::Row;
 use cdrs::types::IntoRustByIndex;
@@ -20,7 +18,7 @@ impl<T: Into<Value>> ToJsonValue for T {
     }
 }
 
-fn column_to_json<R, T>(i: usize, row: &T) -> Result<Value>
+fn column_to_json<R, T>(i: usize, row: &T) -> AppResult<Value>
 where
     R: ToJsonValue,
     T: IntoRustByIndex<R>,
@@ -32,7 +30,7 @@ where
     }
 }
 
-pub fn row_to_json(meta: &RowsMetadata, row: &Row) -> Result<Value> {
+pub fn row_to_json(meta: &RowsMetadata, row: &Row) -> AppResult<String> {
     let mut i = 0;
     let mut obj = Map::with_capacity(meta.columns_count as usize);
 
@@ -61,13 +59,16 @@ pub fn row_to_json(meta: &RowsMetadata, row: &Row) -> Result<Value> {
         obj.insert(name, value);
         i = i + 1;
     }
-    Ok(obj.into())
+
+    let row_obj: Value = obj.into();
+    serde_json::to_string(&row_obj).map_err(|e| e.into())
 }
 
 #[cfg(test)]
 mod tests {
 
     use super::*;
+    use cdrs::error::Result;
 
     struct MockRow<R> {
         val: R,
