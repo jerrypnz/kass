@@ -2,13 +2,12 @@ extern crate cdrs;
 extern crate clap;
 extern crate itertools;
 extern crate serde_json;
-#[macro_use] extern crate matches;
 
 mod errors;
 mod json;
 mod params;
 
-use errors::AppResult;
+use errors::{AppResult, AppError};
 
 use clap::{App, Arg};
 
@@ -18,33 +17,32 @@ use cdrs::cluster::{ClusterTcpConfig, NodeTcpConfigBuilder, TcpConnectionPool};
 use cdrs::frame::Frame;
 use cdrs::load_balancing::RoundRobin;
 use cdrs::query::*;
+use std::time::Duration;
 
 type CurrentSession = Session<RoundRobin<TcpConnectionPool<NoneAuthenticator>>>;
 
-fn connect(host: &str) -> CurrentSession {
-    let node = NodeTcpConfigBuilder::new(host, NoneAuthenticator {}).build();
+fn connect(host: &str) -> AppResult<CurrentSession> {
+    let node = NodeTcpConfigBuilder::new(host, NoneAuthenticator {})
+        .connection_timeout(Duration::from_secs(10)) //TODO CLI option for timeout
+        .build();
     let cluster_config = ClusterTcpConfig(vec![node]);
-    let session = new_session(&cluster_config, RoundRobin::new())
-        .expect(format!("Failed to connect to {}", host).as_str());
-    session
+    let session = new_session(&cluster_config, RoundRobin::new())?;
+    Ok(session)
 }
 
 fn process_response(resp: &Frame) -> AppResult<()> {
     let body = resp.get_body()?;
 
-    let meta = body.as_rows_metadata();
+    let meta = body.as_rows_metadata().ok_or(AppError::general("row metadata not found in response"))?;
     let rows = body.into_rows();
-    match rows {
-        Some(rows) => {
-            let meta = meta.unwrap();
-            for row in rows {
-                let json = json::row_to_json(&meta, &row)?;
-                let json_str = serde_json::to_string(&json).expect("failed to print json");
-                println!("{}", json_str);
+    if let Some(rows) = rows {
+        for row in rows {
+            match json::row_to_json(&meta, &row) {
+                Ok(json) => println!("{}", json),
+                Err(err) => eprintln!("{}", err),
             }
         }
-        None => println!("Query didn't return a result"),
-    };
+    }
     Ok(())
 }
 
@@ -55,7 +53,7 @@ fn query_with_args(session: &CurrentSession, cql: &str, args: Vec<&str>) -> AppR
     for val in vals {
         let query_vals = QueryValues::SimpleValues(val);
         let params = QueryParamsBuilder::new().values(query_vals).finalize();
-        let resp = session .exec_with_params(&prepared, params)?;
+        let resp = session.exec_with_params(&prepared, params)?;
         process_response(&resp)?;
     }
 
@@ -67,10 +65,9 @@ fn query(session: &CurrentSession, cql: &str) -> AppResult<()> {
     process_response(&resp)
 }
 
-fn main() -> AppResult<()> {
+fn main() {
     let matches = App::new("CQL")
         .version("0.1.0")
-        .author("Jerry Peng <pr2jerry@gmail.com>")
         .about("Command line Cassandra CQL client")
         .arg(
             Arg::with_name("host")
@@ -99,13 +96,18 @@ fn main() -> AppResult<()> {
 
     let host = matches.value_of("host").unwrap_or("127.0.0.1:19142");
     let cql = matches.value_of("QUERY").expect("QUERY is required");
-    let params: Option<Vec<&str>> = matches
-        .values_of("PARAM")
-        .map(|x| x.collect());
+    let params: Option<Vec<&str>> = matches.values_of("PARAM").map(|x| x.collect());
 
-    let session = connect(host);
-    match params {
+    let result = connect(host).and_then(|session| match params {
         Some(args) => query_with_args(&session, cql, args),
-        None => query(&session, cql)
+        None => query(&session, cql),
+    });
+
+    if let Err(err) = result {
+        eprintln!("{}", err);
     }
 }
+
+#[cfg(test)]
+#[macro_use]
+extern crate matches;

@@ -20,12 +20,12 @@ impl GenQueryValues for Range<i32> {
 fn parse_int_range(s: &str) -> AppResult<Range<i32>> {
     let from_to: Vec<&str> = s.split('-').collect();
     if from_to.len() != 2 {
-        Err(AppError::InvalidRange(format!("invalid range {}", s)))
+        Err(AppError::General(format!("invalid range {}", s)))
     } else {
         let from = from_to[0].parse::<i32>()?;
         let to = from_to[1].parse::<i32>()?;
         if from >= to {
-            Err(AppError::InvalidRange(format!(
+            Err(AppError::General(format!(
                 "range start {} is greater/equal to range end {}",
                 from, to
             )))
@@ -60,7 +60,7 @@ mod tests {
     fn test_parse_int_range_invalid_ranges() {
         let ss = ["abc", "100"];
         for s in ss.iter() {
-            assert_matches!(parse_int_range(s), Err(AppError::InvalidRange(_)))
+            assert_matches!(parse_int_range(s), Err(AppError::General(_)))
         }
     }
 
