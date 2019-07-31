@@ -5,13 +5,18 @@ use core::ops::Range;
 use itertools::Itertools;
 use std::iter::Iterator;
 
+enum QueryValues<'a> {
+    IntRange(Range<i32>),
+    Strings(Vec<&'a str>),
+}
+
 type Values = Vec<Value>;
 
 trait GenQueryValues {
     fn get_values(self) -> Values;
 }
 
-impl GenQueryValues for Range<i32> {
+impl<T: Into<Value>, L: Iterator<Item=T>> GenQueryValues for L {
     fn get_values(self) -> Values {
         self.map(|x| x.into()).collect()
     }
@@ -35,14 +40,31 @@ fn parse_int_range(s: &str) -> AppResult<Range<i32>> {
     }
 }
 
+fn parse_strings<'a>(s: &'a str) -> Vec<&'a str> {
+    s.split(',').collect()
+}
+
+fn parse_query_values<'a>(s: &'a str) -> QueryValues<'a> {
+    match parse_int_range(s).map(QueryValues::IntRange) {
+        Ok(x) => x,
+        Err(_) => QueryValues::Strings(parse_strings(s)),
+    }
+}
+
+fn to_cdrs_values(vals: QueryValues) -> Values {
+    match vals {
+        QueryValues::IntRange(r) => r.get_values(),
+        QueryValues::Strings(xs) => xs.into_iter().get_values(),
+    }
+}
+
 pub fn parse_args(args: Vec<&str>) -> AppResult<Vec<Values>> {
     let results: Vec<Values> = args
         .iter()
-        .map(|arg| parse_int_range(arg).map(|x| x.get_values()))
-        .collect::<AppResult<Vec<Values>>>()?;
+        .map(|arg| to_cdrs_values(parse_query_values(arg)))
+        .collect();
 
-    let all_args = results.into_iter().multi_cartesian_product().collect();
-    Ok(all_args)
+    Ok(results.into_iter().multi_cartesian_product().collect())
 }
 
 #[cfg(test)]
@@ -60,7 +82,11 @@ mod tests {
     fn test_parse_int_range_invalid_ranges() {
         let ss = ["abc", "100"];
         for s in ss.iter() {
-            assert_matches!(parse_int_range(s), Err(AppError::General(_)))
+            if let Err(AppError::General(msg)) = parse_int_range(s) {
+                assert_eq!(msg, format!("invalid range {}", s));
+            } else {
+                panic!("didn't get expected error")
+            }
         }
     }
 
