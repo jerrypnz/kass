@@ -3,6 +3,7 @@ extern crate clap;
 extern crate futures;
 extern crate itertools;
 extern crate serde_json;
+extern crate chrono;
 
 mod cass;
 mod errors;
