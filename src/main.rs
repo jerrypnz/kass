@@ -4,12 +4,14 @@ extern crate futures;
 extern crate itertools;
 extern crate serde_json;
 extern crate chrono;
+extern crate uuid;
 
 mod cass;
 mod errors;
 mod future_utils;
 mod json;
 mod params;
+mod convert;
 
 use clap::{App, Arg};
 

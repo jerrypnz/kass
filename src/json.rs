@@ -1,42 +1,29 @@
-use std::convert::Into;
+use std::convert::{Into};
 
 use cdrs::frame::frame_result::{ColType, RowsMetadata};
 use cdrs::types::rows::Row;
 use cdrs::types::IntoRustByIndex;
-use chrono::{SecondsFormat, TimeZone, Utc};
 use serde_json::map::Map;
 use serde_json::Value;
 
+use crate::convert;
 use crate::errors::AppResult;
 
-pub trait ToJsonValue {
-    fn to_json(self) -> Value;
-}
-
-impl<T: Into<Value>> ToJsonValue for T {
-    fn to_json(self) -> Value {
-        self.into()
-    }
-}
-
-fn col_to_json<R: ToJsonValue, T: IntoRustByIndex<R>>(i: usize, row: &T) -> AppResult<Value> {
+fn convert_col_to_json<R, S, T, F>(i: usize, row: &T, f: F) -> AppResult<Value>
+where
+    S: Into<Value>,
+    T: IntoRustByIndex<R>,
+    F: Fn(R) -> S,
+{
     let value = row.get_by_index(i)?;
     match value {
-        Some(value) => Ok(value.to_json()),
+        Some(value) => Ok(f(value).into()),
         None => Ok(Value::Null),
     }
 }
 
-fn timestamp_col_to_json<T: IntoRustByIndex<i64>>(i: usize, row: &T) -> AppResult<Value> {
-    let value = row.get_by_index(i)?;
-    match value {
-        Some(value) => {
-            let ts = Utc.timestamp_millis(value);
-            let iso_str = ts.to_rfc3339_opts(SecondsFormat::Millis, true);
-            Ok(iso_str.to_json())
-        }
-        None => Ok(Value::Null),
-    }
+fn col_to_json<S: Into<Value>, T: IntoRustByIndex<S>>(i: usize, row: &T) -> AppResult<Value> {
+    convert_col_to_json(i, row, |x| x)
 }
 
 pub fn row_to_json(meta: &RowsMetadata, row: &Row) -> AppResult<String> {
@@ -58,7 +45,14 @@ pub fn row_to_json(meta: &RowsMetadata, row: &Row) -> AppResult<String> {
             ColType::Double => col_to_json::<f64, _>(i, row)?,
             // bool
             ColType::Boolean => col_to_json::<bool, _>(i, row)?,
-            ColType::Timestamp => timestamp_col_to_json(i, row)?,
+            // date time
+            ColType::Date => convert_col_to_json(i, row, convert::to_date_str)?,
+            ColType::Time => convert_col_to_json(i, row, convert::to_time_str)?,
+            ColType::Timestamp => convert_col_to_json(i, row, convert::to_date_time_str)?,
+            // IP
+            ColType::Inet => convert_col_to_json(i, row, convert::to_ip_str)?,
+            // UUID
+            ColType::Uuid => convert_col_to_json(i, row, convert::to_uuid_str)?,
             // null
             ColType::Null => Value::Null,
             //TODO Implement other types: Blob, Udt etc
