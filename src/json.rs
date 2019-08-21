@@ -1,4 +1,4 @@
-use std::convert::{Into};
+use std::convert::{Into, identity};
 
 use cdrs::frame::frame_result::{ColType, RowsMetadata};
 use cdrs::types::rows::Row;
@@ -23,7 +23,7 @@ where
 }
 
 fn col_to_json<S: Into<Value>, T: IntoRustByIndex<S>>(i: usize, row: &T) -> AppResult<Value> {
-    convert_col_to_json(i, row, |x| x)
+    convert_col_to_json(i, row, identity)
 }
 
 pub fn row_to_json(meta: &RowsMetadata, row: &Row) -> AppResult<String> {
