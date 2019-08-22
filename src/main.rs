@@ -1,7 +1,9 @@
+#![macro_use]
 extern crate cdrs;
 extern crate clap;
 extern crate futures;
 extern crate itertools;
+extern crate serde;
 extern crate serde_json;
 extern crate chrono;
 extern crate uuid;
@@ -9,9 +11,8 @@ extern crate uuid;
 mod cass;
 mod errors;
 mod future_utils;
-mod json;
 mod params;
-mod convert;
+mod types;
 
 use clap::{App, Arg};
 
