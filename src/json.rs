@@ -52,7 +52,7 @@ pub fn row_to_json(meta: &RowsMetadata, row: &Row) -> AppResult<String> {
             // IP
             ColType::Inet => convert_col_to_json(i, row, convert::to_ip_str)?,
             // UUID
-            ColType::Uuid => convert_col_to_json(i, row, convert::to_uuid_str)?,
+            ColType::Uuid | ColType::Timeuuid => convert_col_to_json(i, row, convert::to_uuid_str)?,
             // null
             ColType::Null => Value::Null,
             //TODO Implement other types: Blob, Udt etc
