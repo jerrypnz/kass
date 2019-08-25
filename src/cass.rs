@@ -16,7 +16,7 @@ use cdrs::types::CBytes;
 use futures::executor::{block_on, ThreadPoolBuilder};
 use serde_json::Map;
 
-use crate::errors::{AppResult};
+use crate::errors::AppResult;
 use crate::future_utils::{self, SpawnFuture};
 use crate::params;
 use crate::types::decode_value;

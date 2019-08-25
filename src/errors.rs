@@ -1,12 +1,12 @@
 extern crate cdrs;
 
-use cdrs::error::{Error as CDRSError};
+use cdrs::error::Error as CDRSError;
+use serde_json::Error as JsonError;
 use std::convert::From;
 use std::error::Error;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::num::ParseIntError;
 use std::result::Result;
-use serde_json::{Error as JsonError};
 
 #[derive(Debug)]
 pub enum AppError {

@@ -1,11 +1,11 @@
 #![macro_use]
 extern crate cdrs;
+extern crate chrono;
 extern crate clap;
 extern crate futures;
 extern crate itertools;
 extern crate serde;
 extern crate serde_json;
-extern crate chrono;
 extern crate uuid;
 
 mod cass;

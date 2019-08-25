@@ -14,7 +14,7 @@ impl<P: SpawnExt> SpawnFuture for P {
     where
         T: Send + 'static,
         E: Send + 'static,
-        F: FnOnce() -> Result<T, E> + Send + 'static
+        F: FnOnce() -> Result<T, E> + Send + 'static,
     {
         //TODO Error handling
         self.spawn_with_handle(lazy(|_| f()))
