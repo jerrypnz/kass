@@ -29,7 +29,7 @@ fn row_to_json(meta: &RowsMetadata, row: &Vec<CBytes>) -> AppResult<String> {
 
     for col in &meta.col_specs {
         let name = col.name.as_plain();
-        let value = decode_value(col, &row[i])?;
+        let value = decode_value(&col.col_type, &row[i])?;
         obj.insert(name, serde_json::to_value(value)?);
         i = i + 1;
     }

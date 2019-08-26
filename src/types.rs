@@ -2,8 +2,8 @@
 use std::convert::TryInto;
 use std::net::IpAddr;
 
-use cdrs::error::Result as CDRSResult;
-use cdrs::frame::frame_result::{ColSpec, ColType};
+use cdrs::error::{Error as CDRSError, Result as CDRSResult};
+use cdrs::frame::frame_result::{ColType, ColTypeOption, ColTypeOptionValue};
 use cdrs::types::data_serialization_types::*;
 use cdrs::types::CBytes;
 use chrono::{DateTime, NaiveDate, NaiveTime, TimeZone, Utc};
@@ -36,7 +36,7 @@ pub enum ColValue {
     Uuid(Uuid),
     Boolean(bool),
     String(String),
-    //Seq(Vec<ColValue>),
+    Seq(Vec<ColValue>),
     //Map(HashMap<String, ColValue>),
 }
 
@@ -55,9 +55,22 @@ fn to_datetime(t: i64) -> DateTime<Utc> {
     Utc.timestamp_millis(t)
 }
 
-pub fn decode_value(spec: &ColSpec, data: &CBytes) -> CDRSResult<ColValue> {
+fn to_seq(
+    meta: &Option<ColTypeOptionValue>,
+    data: &Vec<CBytes>,
+) -> CDRSResult<Vec<ColValue>> {
+    match meta {
+        Some(ColTypeOptionValue::CList(ref elem_type))
+        | Some(ColTypeOptionValue::CSet(ref elem_type)) => {
+            data.iter().map(|x| decode_value(elem_type, x)).collect()
+        }
+        _ => Err(CDRSError::General(format!("Error converting collection"))),
+    }
+}
+
+pub fn decode_value(col_type: &ColTypeOption, data: &CBytes) -> CDRSResult<ColValue> {
     if let Some(ref bytes) = data.as_plain() {
-        let value = match &spec.col_type.id {
+        let value = match &col_type.id {
             // strings
             ColType::Varchar => ColValue::String(decode_varchar(bytes)?),
             ColType::Ascii => ColValue::String(decode_ascii(bytes)?),
@@ -83,6 +96,9 @@ pub fn decode_value(spec: &ColSpec, data: &CBytes) -> CDRSResult<ColValue> {
             ColType::Uuid | ColType::Timeuuid => ColValue::Uuid(Uuid {
                 uuid: decode_timeuuid(bytes)?,
             }),
+            // List / Set
+            ColType::List => ColValue::Seq(to_seq(&col_type.value, &decode_list(bytes)?)?),
+            ColType::Set => ColValue::Seq(to_seq(&col_type.value, &decode_set(bytes)?)?),
             // null
             ColType::Null => ColValue::Null,
             //TODO Implement other types: Blob, Udt etc
