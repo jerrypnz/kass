@@ -1,4 +1,4 @@
-//use std::collections::HashMap;
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::net::IpAddr;
 
@@ -37,12 +37,29 @@ pub enum ColValue {
     Boolean(bool),
     String(String),
     Seq(Vec<ColValue>),
-    //Map(HashMap<String, ColValue>),
+    Map(HashMap<String, ColValue>),
+}
+
+impl ColValue {
+    fn as_map_key(self) -> CDRSResult<String> {
+        match self {
+            ColValue::String(x) => Ok(x),
+            ColValue::Int(x) => Ok(format!("{}", x)),
+            ColValue::Boolean(x) => Ok(format!("{}", x)),
+            ColValue::Double(x) => Ok(format!("{}", x)),
+            ColValue::Date(x) => Ok(format!("{}", x)),
+            ColValue::Time(x) => Ok(format!("{}", x)),
+            ColValue::Timestamp(x) => Ok(format!("{}", x)),
+            ColValue::Inet(x) => Ok(format!("{}", x)),
+            ColValue::Uuid(x) => Ok(format!("{}", x.uuid)),
+            _ => Err(CDRSError::General("Unexpected map key type".into())),
+        }
+    }
 }
 
 pub fn to_time(t: i64) -> NaiveTime {
-    let secs: u32 = (t / 1000_000_000).try_into().expect("Value out of range");
-    let nano: u32 = (t % 1000_000_000).try_into().expect("Value out of range");
+    let secs: u32 = (t / 1000_000_000).try_into().unwrap_or(0);
+    let nano: u32 = (t % 1000_000_000).try_into().unwrap_or(0);
     NaiveTime::from_num_seconds_from_midnight(secs, nano)
 }
 
@@ -55,16 +72,43 @@ fn to_datetime(t: i64) -> DateTime<Utc> {
     Utc.timestamp_millis(t)
 }
 
-fn to_seq(
-    meta: &Option<ColTypeOptionValue>,
-    data: &Vec<CBytes>,
-) -> CDRSResult<Vec<ColValue>> {
+fn to_seq(meta: &Option<ColTypeOptionValue>, data: &Vec<CBytes>) -> CDRSResult<Vec<ColValue>> {
     match meta {
-        Some(ColTypeOptionValue::CList(ref elem_type))
-        | Some(ColTypeOptionValue::CSet(ref elem_type)) => {
+        Some(ColTypeOptionValue::CList(elem_type)) | Some(ColTypeOptionValue::CSet(elem_type)) => {
             data.iter().map(|x| decode_value(elem_type, x)).collect()
         }
-        _ => Err(CDRSError::General(format!("Error converting collection"))),
+        _ => Err(CDRSError::General("Error converting list/set".into())),
+    }
+}
+
+fn to_tuple(meta: &Option<ColTypeOptionValue>, bytes: &[u8]) -> CDRSResult<Vec<ColValue>> {
+    if let Some(ColTypeOptionValue::TupleType(tuple_meta)) = meta {
+        let data = decode_tuple(bytes, tuple_meta.types.len())?;
+        tuple_meta
+            .types
+            .iter()
+            .zip(data.iter())
+            .map(|(t, x)| decode_value(t, x))
+            .collect()
+    } else {
+        Err(CDRSError::General("Error converting tuple".into()))
+    }
+}
+
+fn to_udt(
+    meta: &Option<ColTypeOptionValue>,
+    bytes: &[u8],
+) -> CDRSResult<HashMap<String, ColValue>> {
+    if let Some(ColTypeOptionValue::UdtType(udt_meta)) = meta {
+        let data = decode_udt(bytes, udt_meta.descriptions.len())?;
+        udt_meta
+            .descriptions
+            .iter()
+            .zip(data.iter())
+            .map(|((name, t), x)| decode_value(t, x).map(|v| (name.as_plain(), v)))
+            .collect()
+    } else {
+        Err(CDRSError::General("Error converting UDT".into()))
     }
 }
 
@@ -80,6 +124,7 @@ pub fn decode_value(col_type: &ColTypeOption, data: &CBytes) -> CDRSResult<ColVa
             ColType::Smallint => ColValue::Int(decode_smallint(bytes)? as i64),
             ColType::Int => ColValue::Int(decode_int(bytes)? as i64),
             ColType::Bigint => ColValue::Int(decode_bigint(bytes)?),
+            ColType::Varint => ColValue::Int(decode_varint(bytes)?),
             ColType::Counter => ColValue::Int(decode_bigint(bytes)?),
             // floats
             ColType::Float => ColValue::Double(decode_float(bytes)? as f64),
@@ -99,10 +144,16 @@ pub fn decode_value(col_type: &ColTypeOption, data: &CBytes) -> CDRSResult<ColVa
             // List / Set
             ColType::List => ColValue::Seq(to_seq(&col_type.value, &decode_list(bytes)?)?),
             ColType::Set => ColValue::Seq(to_seq(&col_type.value, &decode_set(bytes)?)?),
+            // Tuple
+            ColType::Tuple => ColValue::Seq(to_tuple(&col_type.value, bytes)?),
+            // UDT
+            ColType::Udt => ColValue::Map(to_udt(&col_type.value, bytes)?),
             // null
             ColType::Null => ColValue::Null,
             //TODO Implement other types: Blob, Udt etc
-            _ => ColValue::String(String::from("__UNSUPPORTED TYPE__")),
+            ColType::Decimal | ColType::Blob | ColType::Map => {
+                ColValue::String(String::from("__UNSUPPORTED TYPE__"))
+            }
         };
         Ok(value)
     } else {
