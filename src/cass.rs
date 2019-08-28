@@ -19,7 +19,7 @@ use serde_json::Map;
 use crate::errors::AppResult;
 use crate::future_utils::{self, SpawnFuture};
 use crate::params;
-use crate::types::decode_value;
+use crate::types::ColValue;
 
 pub type CurrentSession = Session<RoundRobinSync<TcpConnectionPool<NoneAuthenticator>>>;
 
@@ -29,7 +29,7 @@ fn row_to_json(meta: &RowsMetadata, row: &Vec<CBytes>) -> AppResult<String> {
 
     for col in &meta.col_specs {
         let name = col.name.as_plain();
-        let value = decode_value(&col.col_type, &row[i])?;
+        let value = ColValue::decode(&col.col_type, &row[i])?;
         obj.insert(name, serde_json::to_value(value)?);
         i = i + 1;
     }
