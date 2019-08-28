@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::net::IpAddr;
+use std::result::Result;
 
 use cdrs::error::{Error as CDRSError, Result as CDRSResult};
 use cdrs::frame::frame_result::{ColType, ColTypeOption, ColTypeOptionValue};
@@ -81,6 +82,23 @@ fn to_seq(meta: &Option<ColTypeOptionValue>, data: &Vec<CBytes>) -> CDRSResult<V
     }
 }
 
+fn to_map(
+    meta: &Option<ColTypeOptionValue>,
+    data: &Vec<(CBytes, CBytes)>,
+) -> CDRSResult<HashMap<String, ColValue>> {
+    if let Some(ColTypeOptionValue::CMap((key_meta, value_meta))) = meta {
+        data.iter()
+            .map(|(k, v)| {
+                let key = decode_value(key_meta, k)?.as_map_key()?;
+                let value = decode_value(value_meta, v)?;
+                Ok((key, value))
+            })
+            .collect()
+    } else {
+        Err(CDRSError::General("Error converting map".into()))
+    }
+}
+
 fn to_tuple(meta: &Option<ColTypeOptionValue>, bytes: &[u8]) -> CDRSResult<Vec<ColValue>> {
     if let Some(ColTypeOptionValue::TupleType(tuple_meta)) = meta {
         let data = decode_tuple(bytes, tuple_meta.types.len())?;
@@ -105,7 +123,11 @@ fn to_udt(
             .descriptions
             .iter()
             .zip(data.iter())
-            .map(|((name, t), x)| decode_value(t, x).map(|v| (name.as_plain(), v)))
+            .map(|((name, t), x)| {
+                let key = name.as_plain();
+                let value = decode_value(t, x)?;
+                Ok((key, value))
+            })
             .collect()
     } else {
         Err(CDRSError::General("Error converting UDT".into()))
@@ -144,6 +166,8 @@ pub fn decode_value(col_type: &ColTypeOption, data: &CBytes) -> CDRSResult<ColVa
             // List / Set
             ColType::List => ColValue::Seq(to_seq(&col_type.value, &decode_list(bytes)?)?),
             ColType::Set => ColValue::Seq(to_seq(&col_type.value, &decode_set(bytes)?)?),
+            // Map
+            ColType::Map => ColValue::Map(to_map(&col_type.value, &decode_map(bytes)?)?),
             // Tuple
             ColType::Tuple => ColValue::Seq(to_tuple(&col_type.value, bytes)?),
             // UDT
@@ -151,7 +175,7 @@ pub fn decode_value(col_type: &ColTypeOption, data: &CBytes) -> CDRSResult<ColVa
             // null
             ColType::Null => ColValue::Null,
             //TODO Implement other types: Blob, Udt etc
-            ColType::Decimal | ColType::Blob | ColType::Map => {
+            ColType::Decimal | ColType::Blob => {
                 ColValue::String(String::from("__UNSUPPORTED TYPE__"))
             }
         };
