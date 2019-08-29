@@ -16,7 +16,7 @@ trait GenQueryValues {
     fn get_values(self) -> Values;
 }
 
-impl<T: Into<Value>, L: Iterator<Item=T>> GenQueryValues for L {
+impl<T: Into<Value>, L: Iterator<Item = T>> GenQueryValues for L {
     fn get_values(self) -> Values {
         self.map(|x| x.into()).collect()
     }

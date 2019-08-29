@@ -1,31 +1,51 @@
-use crate::errors::{AppError, AppResult};
-use crate::future_utils::{self, SpawnFuture};
-use crate::json;
-use crate::params;
+use std::convert::Into;
+use std::sync::Arc;
+use std::time::Duration;
+
 use cdrs::authenticators::NoneAuthenticator;
 use cdrs::cluster::session::{new as new_session, Session};
 use cdrs::cluster::{ClusterTcpConfig, NodeTcpConfigBuilder, TcpConnectionPool};
+use cdrs::frame::frame_response::ResponseBody;
+use cdrs::frame::frame_result::ResResultBody;
+use cdrs::frame::frame_result::RowsMetadata;
 use cdrs::frame::Frame;
 use cdrs::load_balancing::RoundRobinSync;
 use cdrs::query::*;
 use cdrs::types::value::Value;
+use cdrs::types::CBytes;
 use futures::executor::{block_on, ThreadPoolBuilder};
-use std::sync::Arc;
-use std::time::Duration;
+use serde_json::Map;
+
+use crate::errors::AppResult;
+use crate::future_utils::{self, SpawnFuture};
+use crate::params;
+use crate::types::ColValue;
 
 pub type CurrentSession = Session<RoundRobinSync<TcpConnectionPool<NoneAuthenticator>>>;
+
+fn row_to_json(meta: &RowsMetadata, row: &Vec<CBytes>) -> AppResult<String> {
+    let mut i = 0;
+    let mut obj = Map::with_capacity(meta.columns_count as usize);
+
+    for col in &meta.col_specs {
+        let name = col.name.as_plain();
+        let value = ColValue::decode(&col.col_type, &row[i])?;
+        obj.insert(name, serde_json::to_value(value)?);
+        i = i + 1;
+    }
+
+    serde_json::to_string(&obj).map_err(|e| e.into())
+}
 
 fn process_response(resp: &Frame) -> AppResult<()> {
     let body = resp.get_body()?;
 
-    let meta = body
-        .as_rows_metadata()
-        .ok_or(AppError::general("row metadata not found in response"))?;
-    let rows = body.into_rows();
-    if let Some(rows) = rows {
-        for row in rows {
-            match json::row_to_json(&meta, &row) {
+    if let ResponseBody::Result(ResResultBody::Rows(rows)) = body {
+        let meta = rows.metadata;
+        for row in rows.rows_content {
+            match row_to_json(&meta, &row) {
                 Ok(json) => println!("{}", json),
+                // TODO Better error reporting
                 Err(err) => eprintln!("{}", err),
             }
         }
