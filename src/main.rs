@@ -1,4 +1,5 @@
 #![macro_use]
+extern crate bigdecimal;
 extern crate cdrs;
 extern crate chrono;
 extern crate clap;

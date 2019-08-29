@@ -18,11 +18,11 @@ pub enum AppError {
 
 pub type AppResult<T> = Result<T, AppError>;
 
-impl AppError {
-    pub fn general(msg: &str) -> AppError {
-        AppError::General(String::from(msg))
-    }
-}
+// impl AppError {
+//     pub fn general(msg: &str) -> AppError {
+//         AppError::General(String::from(msg))
+//     }
+// }
 
 impl Display for AppError {
     fn fmt(&self, f: &mut Formatter) -> FmtResult {

@@ -45,6 +45,7 @@ fn process_response(resp: &Frame) -> AppResult<()> {
         for row in rows.rows_content {
             match row_to_json(&meta, &row) {
                 Ok(json) => println!("{}", json),
+                // TODO Better error reporting
                 Err(err) => eprintln!("{}", err),
             }
         }
