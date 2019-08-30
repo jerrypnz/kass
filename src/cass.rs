@@ -1,4 +1,3 @@
-use std::convert::Into;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -14,7 +13,9 @@ use cdrs::query::*;
 use cdrs::types::value::Value;
 use cdrs::types::CBytes;
 use futures::executor::{block_on, ThreadPoolBuilder};
-use serde_json::Map;
+use serde_json::{Map, Value as JsonValue};
+use serde_json::ser::CompactFormatter;
+use colored_json::ColoredFormatter;
 
 use crate::errors::AppResult;
 use crate::future_utils::{self, SpawnFuture};
@@ -26,6 +27,7 @@ pub type CurrentSession = Session<RoundRobinSync<TcpConnectionPool<NoneAuthentic
 fn row_to_json(meta: &RowsMetadata, row: &Vec<CBytes>) -> AppResult<String> {
     let mut i = 0;
     let mut obj = Map::with_capacity(meta.columns_count as usize);
+    let fmt = ColoredFormatter::new(CompactFormatter{});
 
     for col in &meta.col_specs {
         let name = col.name.as_plain();
@@ -34,7 +36,8 @@ fn row_to_json(meta: &RowsMetadata, row: &Vec<CBytes>) -> AppResult<String> {
         i = i + 1;
     }
 
-    serde_json::to_string(&obj).map_err(|e| e.into())
+    let s = fmt.to_colored_json_auto(&JsonValue::Object(obj))?;
+    Ok(s)
 }
 
 fn process_response(resp: &Frame) -> AppResult<()> {

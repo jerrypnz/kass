@@ -102,6 +102,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "colored_json"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "ansi_term 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "atty 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.60 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.97 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "cql"
 version = "0.1.0"
 dependencies = [
@@ -109,6 +121,7 @@ dependencies = [
  "cdrs 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "colored_json 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.97 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -190,6 +203,11 @@ dependencies = [
  "pin-utils 0.1.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "slab 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "indexmap"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "itertools"
@@ -548,6 +566,7 @@ name = "serde_json"
 version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
+ "indexmap 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "itoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "ryu 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.97 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -657,6 +676,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum chrono 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)" = "77d81f58b7301084de3b958691458a53c3f7e0b1d702f77e550b6a88e3a88abe"
 "checksum clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5067f5bb2d80ef5d68b4c87db81601f0b75bca627bc2ef76b141d7b846a3c6d9"
 "checksum cloudabi 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "ddfc5b9aa5d4507acaf872de71051dfd0e309860e88966e1051e462a077aac4f"
+"checksum colored_json 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3ebd3772ab1bd6169d9fb746a4ec2f6f94a2500df0a74829aed66d3bc0059072"
 "checksum either 1.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "5527cfe0d098f36e3f8839852688e63c8fff1c90b2b405aef730615f9a7bcf7b"
 "checksum fuchsia-cprng 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "a06f77d526c1a601b7c4cdd98f54b5eaabffc14d5f2f0296febdc7f357c6d3ba"
 "checksum futures-channel-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)" = "21c71ed547606de08e9ae744bb3c6d80f5627527ef31ecf2a7210d0e67bc8fae"
@@ -666,6 +686,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum futures-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)" = "bf25f91c8a9a1f64c451e91b43ba269ed359b9f52d35ed4b3ce3f9c842435867"
 "checksum futures-sink-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)" = "4309a25a1069a1f3c10647b227b9afe6722b67a030d3f00a9cbdc171fc038de4"
 "checksum futures-util-preview 0.3.0-alpha.17 (registry+https://github.com/rust-lang/crates.io-index)" = "af8198c48b222f02326940ce2b3aa9e6e91a32886eeaad7ca3b8e4c70daa3f4e"
+"checksum indexmap 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a4d6d89e0948bf10c08b9ecc8ac5b83f07f857ebe2c0cbe38de15b4e4f510356"
 "checksum itertools 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5b8467d9c1cebe26feb08c640139247fac215782d35371ade9a2136ed6085358"
 "checksum itoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "501266b7edd0174f8530248f87f99c88fbe60ca4ef3dd486835b8d8d53136f7f"
 "checksum lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bc5729f27f159ddd61f4df6228e827e86643d4d3e7c32183cb30a1c08f604a14"
