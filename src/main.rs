@@ -1,7 +1,7 @@
-#![macro_use]
 extern crate bigdecimal;
 extern crate cdrs;
 extern crate chrono;
+#[macro_use]
 extern crate clap;
 extern crate futures;
 extern crate itertools;
@@ -9,7 +9,7 @@ extern crate serde;
 extern crate serde_json;
 extern crate uuid;
 
-mod cass;
+mod core;
 mod errors;
 mod future_utils;
 mod params;
@@ -50,9 +50,9 @@ fn main() {
     let cql = matches.value_of("QUERY").expect("QUERY is required");
     let params: Option<Vec<&str>> = matches.values_of("PARAM").map(|x| x.collect());
 
-    let result = cass::connect(host).and_then(move |session| match params {
-        Some(args) => cass::query_with_args(session, cql, args),
-        None => cass::query(&session, cql),
+    let result = core::connect(host).and_then(move |session| match params {
+        Some(args) => core::query_with_args(session, cql, args),
+        None => core::query(&session, cql),
     });
 
     if let Err(err) = result {
