@@ -1,7 +1,6 @@
 extern crate bigdecimal;
 extern crate cdrs;
 extern crate chrono;
-#[macro_use]
 extern crate clap;
 extern crate futures;
 extern crate itertools;
@@ -15,47 +14,78 @@ mod future_utils;
 mod params;
 mod types;
 
-use clap::{App, Arg};
+use self::clap::{App, AppSettings, Arg};
+use self::errors::{AppError, AppResult};
 
-fn main() {
-    let matches = App::new("CQL")
+fn app() -> App<'static, 'static> {
+    App::new("CQL")
         .version("0.1.0")
         .about("Command line Cassandra CQL client")
+        .setting(AppSettings::TrailingVarArg)
+        .setting(AppSettings::UnifiedHelpMessage)
+        .setting(AppSettings::ColoredHelp)
         .arg(
             Arg::with_name("host")
                 .short("h")
                 .long("host")
+                .takes_value(true)
                 .value_name("HOST:PORT")
-                .help("The Cassandra host to connect to")
-                .takes_value(true),
+                .help("The Cassandra host to connect to"),
         )
         .arg(
-            Arg::with_name("QUERY")
+            Arg::with_name("color")
+                .short("C")
+                .long("color")
+                .takes_value(true)
+                .possible_values(&["auto", "always", "never"])
+                .default_value("auto")
+                .help("When to use terminal colors"),
+        )
+        .arg(
+            Arg::with_name("pretty")
+                .long("pretty")
+                .help("Pretty print JSON"),
+        )
+        .arg(
+            Arg::with_name("parallelism")
+                .short("P")
+                .long("parallelism")
+                .takes_value(true)
+                .default_value("5")
+                .help("When to use terminal colors"),
+        )
+        .arg(
+            Arg::with_name("query")
                 .help("The query to run")
                 .required(true)
                 .index(1),
         )
         .arg(
-            Arg::with_name("PARAM")
-                .short("p")
-                .long("param")
-                .takes_value(true)
+            Arg::with_name("param")
                 .multiple(true)
-                .value_name("M-N")
-                .help("A query parameter"),
+                .value_name("param")
+                .help("Query parameters"),
         )
-        .get_matches();
+}
 
-    let host = matches.value_of("host").unwrap_or("127.0.0.1:19142");
-    let cql = matches.value_of("QUERY").expect("QUERY is required");
-    let params: Option<Vec<&str>> = matches.values_of("PARAM").map(|x| x.collect());
+fn run() -> AppResult<()> {
+    let matches = app().get_matches();
 
-    let result = core::connect(host).and_then(move |session| match params {
-        Some(args) => core::query_with_args(session, cql, args),
-        None => core::query(&session, cql),
-    });
+    let query = matches
+        .value_of("query")
+        .ok_or(AppError::general("query is required"))?;
 
-    if let Err(err) = result {
+    let param_values = matches
+        .values_of("param")
+        .map(params::parse_args)
+        .map_or(Ok(None), |r| r.map(Some))?;
+
+    let config = core::Config::from_matches(&matches)?;
+    core::run_query(config, query, param_values)
+}
+
+fn main() {
+    if let Err(err) = run() {
         eprintln!("{}", err);
     }
 }
