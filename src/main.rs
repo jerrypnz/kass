@@ -38,7 +38,7 @@ fn app() -> App<'static, 'static> {
                 .short("C")
                 .long("color")
                 .takes_value(true)
-                .possible_values(&["auto", "always", "never"])
+                .possible_values(&["auto", "on", "off"])
                 .default_value("auto")
                 .help("When to use terminal colors"),
         )
@@ -53,7 +53,7 @@ fn app() -> App<'static, 'static> {
                 .long("parallelism")
                 .takes_value(true)
                 .default_value("5")
-                .help("When to use terminal colors"),
+                .help("Max number of parallel queries"),
         )
         .arg(
             Arg::with_name("query")

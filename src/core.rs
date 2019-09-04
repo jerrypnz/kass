@@ -44,8 +44,8 @@ impl Config {
         }
 
         let color = match matches.value_of("color") {
-            Some("never") => ColorMode::Off,
-            Some("always") => ColorMode::On,
+            Some("off") => ColorMode::Off,
+            Some("on") => ColorMode::On,
             _ => ColorMode::Auto(Output::StdOut),
         };
         let parallelism = match matches.value_of("parallelism") {
