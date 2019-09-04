@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use ansi_term::{Colour, Style};
 use cdrs::authenticators::NoneAuthenticator;
 use cdrs::cluster::session::{new as new_session, Session};
 use cdrs::cluster::{ClusterTcpConfig, NodeTcpConfigBuilder, TcpConnectionPool};
@@ -12,9 +13,9 @@ use cdrs::load_balancing::RoundRobinSync;
 use cdrs::query::*;
 use cdrs::types::CBytes;
 use clap::ArgMatches;
-use colored_json::ColoredFormatter;
+use colored_json::{ColoredFormatter, Styler};
 use futures::executor::{block_on, ThreadPoolBuilder};
-use serde_json::ser::CompactFormatter;
+use serde_json::ser::{Formatter, CompactFormatter, PrettyFormatter};
 use serde_json::{Map, Value as JsonValue};
 
 use crate::errors::AppResult;
@@ -145,10 +146,27 @@ fn write_results(resp: &Frame, config: &Config) -> AppResult<()> {
     Ok(())
 }
 
+fn format_json<F: Formatter>(formatter: F, json: &JsonValue, color: &ColorOpt) -> AppResult<String> {
+    let styler = Styler {
+        integer_value: Style::new().fg(Colour::Yellow),
+        float_value: Style::new().fg(Colour::Yellow),
+        bool_value: Style::new().fg(Colour::White),
+        nil_value: Style::new().fg(Colour::Red),
+        ..Default::default()
+    };
+    let fmt = ColoredFormatter::with_styler(formatter, styler);
+    Ok(fmt.to_colored_json_auto(json)?)
+}
+
 fn write_row(meta: &RowsMetadata, row: &Vec<CBytes>, config: &Config) {
-    let fmt = ColoredFormatter::new(CompactFormatter {});
     let result = row_to_json(meta, row)
-        .and_then(|x| fmt.to_colored_json_auto(&x).map_err(|x| x.into()));
+        .and_then(|x| {
+            if config.pretty {
+                format_json(PrettyFormatter::new(), &x, &config.color)
+            } else {
+                format_json(CompactFormatter{}, &x, &config.color)
+            }
+        });
 
     match result {
         Ok(json) => println!("{}", json),
