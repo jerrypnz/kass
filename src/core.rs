@@ -13,7 +13,7 @@ use cdrs::load_balancing::RoundRobinSync;
 use cdrs::query::*;
 use cdrs::types::CBytes;
 use clap::ArgMatches;
-use colored_json::{ColoredFormatter, Styler};
+use colored_json::{ColoredFormatter, Styler, ColorMode, Output};
 use futures::executor::{block_on, ThreadPoolBuilder};
 use serde_json::ser::{Formatter, CompactFormatter, PrettyFormatter};
 use serde_json::{Map, Value as JsonValue};
@@ -25,15 +25,9 @@ use crate::types::ColValue;
 
 pub type CurrentSession = Session<RoundRobinSync<TcpConnectionPool<NoneAuthenticator>>>;
 
-enum ColorOpt {
-    Auto,
-    Never,
-    Always,
-}
-
 pub struct Config {
     host: String,
-    color: ColorOpt,
+    color: ColorMode,
     parallelism: usize,
     pretty: bool,
 }
@@ -50,9 +44,9 @@ impl Config {
         }
 
         let color = match matches.value_of("color") {
-            Some("never") => ColorOpt::Never,
-            Some("always") => ColorOpt::Always,
-            _ => ColorOpt::Auto,
+            Some("never") => ColorMode::Off,
+            Some("always") => ColorMode::On,
+            _ => ColorMode::Auto(Output::StdOut),
         };
         let parallelism = match matches.value_of("parallelism") {
             Some(x) => x.parse().unwrap_or(5),
@@ -146,7 +140,7 @@ fn write_results(resp: &Frame, config: &Config) -> AppResult<()> {
     Ok(())
 }
 
-fn format_json<F: Formatter>(formatter: F, json: &JsonValue, color: &ColorOpt) -> AppResult<String> {
+fn format_json<F: Formatter>(formatter: F, json: &JsonValue, color: ColorMode) -> AppResult<String> {
     let styler = Styler {
         integer_value: Style::new().fg(Colour::Yellow),
         float_value: Style::new().fg(Colour::Yellow),
@@ -155,16 +149,16 @@ fn format_json<F: Formatter>(formatter: F, json: &JsonValue, color: &ColorOpt) -
         ..Default::default()
     };
     let fmt = ColoredFormatter::with_styler(formatter, styler);
-    Ok(fmt.to_colored_json_auto(json)?)
+    Ok(fmt.to_colored_json(json, color)?)
 }
 
 fn write_row(meta: &RowsMetadata, row: &Vec<CBytes>, config: &Config) {
     let result = row_to_json(meta, row)
         .and_then(|x| {
             if config.pretty {
-                format_json(PrettyFormatter::new(), &x, &config.color)
+                format_json(PrettyFormatter::new(), &x, config.color)
             } else {
-                format_json(CompactFormatter{}, &x, &config.color)
+                format_json(CompactFormatter{}, &x, config.color)
             }
         });
 
