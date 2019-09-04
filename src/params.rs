@@ -10,7 +10,7 @@ enum QueryValues<'a> {
     Strings(Vec<&'a str>),
 }
 
-type Values = Vec<Value>;
+pub type Values = Vec<Value>;
 
 trait GenQueryValues {
     fn get_values(self) -> Values;
@@ -58,9 +58,8 @@ fn to_cdrs_values(vals: QueryValues) -> Values {
     }
 }
 
-pub fn parse_args(args: Vec<&str>) -> AppResult<Vec<Values>> {
+pub fn parse_args<'a>(args: impl Iterator<Item=&'a str>) -> AppResult<Vec<Values>> {
     let results: Vec<Values> = args
-        .iter()
         .map(|arg| to_cdrs_values(parse_query_values(arg)))
         .collect();
 
