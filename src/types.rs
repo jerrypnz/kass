@@ -15,19 +15,17 @@ use serde::{Serialize, Serializer};
 use uuid;
 
 // Uuid wrapper struct for implementing `Serialize` trait
-pub struct Uuid {
-    uuid: uuid::Uuid,
-}
+pub struct Uuid(uuid::Uuid);
 
 impl Uuid {
     pub fn to_hyphenated_string(&self) -> String {
-        self.uuid.to_hyphenated_ref().to_string()
+        self.0.to_hyphenated_ref().to_string()
     }
 }
 
 impl From<uuid::Uuid> for Uuid {
     fn from(id: uuid::Uuid) -> Uuid {
-        Uuid { uuid: id }
+        Uuid(id)
     }
 }
 
@@ -37,21 +35,21 @@ impl Serialize for Uuid {
     }
 }
 
-pub struct Decimal {
-    num: bigdecimal::BigDecimal,
-}
+pub struct Decimal(bigdecimal::BigDecimal);
 
 impl From<CDRSDecimal> for Decimal {
     fn from(n: CDRSDecimal) -> Self {
-        let n1 = bigdecimal::BigDecimal::new(n.unscaled.into(), n.scale.into());
-        Decimal { num: n1 }
+        Decimal(bigdecimal::BigDecimal::new(
+            n.unscaled.into(),
+            n.scale.into(),
+        ))
     }
 }
 
 impl Serialize for Decimal {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         // BigDecimal is serialized as string to avoid f64 overflow
-        serializer.serialize_str(self.num.to_string().as_str())
+        serializer.serialize_str(self.0.to_string().as_str())
     }
 }
 
@@ -266,6 +264,6 @@ mod tests {
     pub fn test_cdrs_decimal_to_big_decimal() {
         let n1 = CDRSDecimal::from(1234.567893456789);
         let n2: Decimal = n1.into();
-        assert_eq!("1234.567893456789", n2.num.to_string().as_str());
+        assert_eq!("1234.567893456789", n2.0.to_string().as_str());
     }
 }
