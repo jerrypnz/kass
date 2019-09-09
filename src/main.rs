@@ -12,6 +12,7 @@ extern crate ansi_term;
 mod core;
 mod errors;
 mod future_utils;
+mod date_range;
 mod params;
 mod types;
 

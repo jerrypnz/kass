@@ -46,9 +46,7 @@ mod tests {
 
         let fut = traverse(0..10, |x| {
             pool.spawn_future(move || {
-                println!("{} starts sleeping", x);
                 thread::sleep(interval);
-                println!("{} wakes up", x);
                 Ok::<_, String>(x * 2)
             })
         });
