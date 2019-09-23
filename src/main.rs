@@ -1,3 +1,4 @@
+extern crate ansi_term;
 extern crate bigdecimal;
 extern crate cdrs;
 extern crate chrono;
@@ -7,12 +8,13 @@ extern crate itertools;
 extern crate serde;
 extern crate serde_json;
 extern crate uuid;
-extern crate ansi_term;
+#[macro_use]
+extern crate lazy_static;
 
 mod core;
+mod date_range;
 mod errors;
 mod future_utils;
-mod date_range;
 mod params;
 mod types;
 
