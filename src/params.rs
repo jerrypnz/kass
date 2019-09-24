@@ -6,8 +6,9 @@ use itertools::Itertools;
 use regex::Regex;
 use std::iter::Iterator;
 
+#[derive(Debug, PartialEq)]
 enum QueryValues<'a> {
-    IntRange(Range<i32>),
+    IntRange { range: Range<i32>, step: usize },
     Strings(Vec<&'a str>),
 }
 
@@ -30,48 +31,64 @@ impl<T: Into<Value>, L: Iterator<Item = T>> GenQueryValues for L {
     }
 }
 
-fn parse_int_range(s: &str) -> AppResult<Range<i32>> {
-    let from_to: Vec<&str> = s.split('-').collect();
-    if from_to.len() != 2 {
-        Err(AppError::General(format!("invalid range {}", s)))
+fn parse_int_range<'a>(
+    from: &'a str,
+    to: &'a str,
+    step: Option<&'a str>,
+) -> AppResult<QueryValues<'a>> {
+    let from = from.parse::<i32>()?;
+    let to = to.parse::<i32>()?;
+    if from >= to {
+        Err(AppError::General(format!(
+            "range start {} is greater/equal to range end {}",
+            from, to
+        )))
     } else {
-        let from = from_to[0].parse::<i32>()?;
-        let to = from_to[1].parse::<i32>()?;
-        if from >= to {
-            Err(AppError::General(format!(
-                "range start {} is greater/equal to range end {}",
-                from, to
-            )))
+        let range = from..to;
+        let step = if let Some(step) = step {
+            step.parse::<usize>()?
         } else {
-            Ok(from..to)
-        }
+            1
+        };
+        Ok(QueryValues::IntRange { range, step })
     }
 }
 
-fn parse_strings<'a>(s: &'a str) -> Vec<&'a str> {
+fn comma_separated<'a>(s: &'a str) -> Vec<&'a str> {
     s.split(',').collect()
 }
 
-fn parse_query_values<'a>(s: &'a str) -> QueryValues<'a> {
-    match parse_int_range(s).map(QueryValues::IntRange) {
-        Ok(x) => x,
-        Err(_) => QueryValues::Strings(parse_strings(s)),
+fn parse_query_values<'a>(s: &'a str) -> AppResult<QueryValues<'a>> {
+    if let Some(matches) = INT_RANGE.captures(s) {
+        Ok(parse_int_range(
+            matches.get(1).unwrap().as_str(),
+            matches.get(2).unwrap().as_str(),
+            matches.get(3).map(|x| x.as_str()),
+        )?)
+    }
+    // else if let Some(matches) = DATE_RANGE.captures(s) {
+
+    // } else if let Some(matches) = DATE_TIME_RANGE.captures(s) {
+
+    // }
+    else {
+        Ok(QueryValues::Strings(comma_separated(s)))
     }
 }
 
 fn to_cdrs_values(vals: QueryValues) -> Values {
     match vals {
-        QueryValues::IntRange(r) => r.get_values(),
+        QueryValues::IntRange { range, step } => range.step_by(step).get_values(),
         QueryValues::Strings(xs) => xs.into_iter().get_values(),
     }
 }
 
 pub fn parse_args<'a>(args: impl Iterator<Item = &'a str>) -> AppResult<Vec<Values>> {
-    let results: Vec<Values> = args
-        .map(|arg| to_cdrs_values(parse_query_values(arg)))
+    let results: AppResult<Vec<Values>> = args
+        .map(|arg| parse_query_values(arg).map(to_cdrs_values))
         .collect();
 
-    Ok(results.into_iter().multi_cartesian_product().collect())
+    Ok(results?.into_iter().multi_cartesian_product().collect())
 }
 
 #[cfg(test)]
@@ -81,20 +98,20 @@ mod tests {
 
     #[test]
     fn test_parse_int_range_valid_ranges() {
-        assert_eq!(parse_int_range("1-10").unwrap(), 1..10);
-        assert_eq!(parse_int_range("1-2").unwrap(), 1..2);
-    }
-
-    #[test]
-    fn test_parse_int_range_invalid_ranges() {
-        let ss = ["abc", "100"];
-        for s in ss.iter() {
-            if let Err(AppError::General(msg)) = parse_int_range(s) {
-                assert_eq!(msg, format!("invalid range {}", s));
-            } else {
-                panic!("didn't get expected error")
+        assert_eq!(
+            parse_int_range("1", "10", None).unwrap(),
+            QueryValues::IntRange {
+                range: 1..10,
+                step: 1
             }
-        }
+        );
+        assert_eq!(
+            parse_int_range("1", "10", Some("3")).unwrap(),
+            QueryValues::IntRange {
+                range: 1..10,
+                step: 3
+            }
+        );
     }
 
     fn capture_groups(re: &Regex, s: &'static str) -> Option<Vec<&'static str>> {
