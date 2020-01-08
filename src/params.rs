@@ -68,8 +68,8 @@ fn parse_query_values<'a>(s: &'a str) -> AppResult<QueryValues<'a>> {
 
 fn to_cdrs_values(vals: QueryValues) -> Values {
     match vals {
-        QueryValues::IntRange { range, step } => range.step_by(step).map(|x| x.into()).collect(),
-        QueryValues::Strings(xs) => xs.into_iter().map(|x| x.into()).collect(),
+        QueryValues::IntRange { range, step } => range.step_by(step).map_into().collect(),
+        QueryValues::Strings(xs) => xs.into_iter().map_into().collect(),
     }
 }
 
