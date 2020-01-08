@@ -4,8 +4,8 @@ use crate::errors::{AppError, AppResult};
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use std::cmp::min;
 
-static DATE_FORMAT: &str = "%Y-%m-%d";
-static DATE_TIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S";
+const DATE_FORMAT: &str = "%Y-%m-%d";
+const DATE_TIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S";
 
 enum DateTimeRange {
     FixedStep(FixedInterval),
@@ -20,21 +20,21 @@ impl DateTimeRange {
         step: &str,
         unit: &str,
     ) -> AppResult<DateTimeRange> {
-        let start_date = NaiveDateTime::parse_from_str(start, fmt)?;
-        let end_date = NaiveDateTime::parse_from_str(end, fmt)?;
+        let start = NaiveDateTime::parse_from_str(start, fmt)?;
+        let end = NaiveDateTime::parse_from_str(end, fmt)?;
         let step_n: u32 = step.parse()?;
 
         let range = if unit == "M" {
-            let current_date = Some(start_date.date());
-            let time_of_day = start_date.time();
+            let current_date = Some(start.date());
+            let time_of_day = start.time();
             DateTimeRange::MonthlyStep(MonthlyInterval {
                 current_date,
                 time_of_day,
-                end: end_date,
+                end,
                 months: step_n,
             })
         } else {
-            let duration = match unit {
+            let step = match unit {
                 "s" => Duration::seconds(step_n as i64),
                 "m" => Duration::minutes(step_n as i64),
                 "h" => Duration::hours(step_n as i64),
@@ -42,11 +42,7 @@ impl DateTimeRange {
                 "W" => Duration::weeks(step_n as i64),
                 _ => return Err(AppError::general("Invalid step unit")),
             };
-            DateTimeRange::FixedStep(FixedInterval {
-                start: start_date,
-                end: end_date,
-                step: duration,
-            })
+            DateTimeRange::FixedStep(FixedInterval { start, end, step })
         };
 
         Ok(range)
@@ -186,14 +182,9 @@ mod tests {
                 date_time(2019, 9, 3, 0, 0, 0),
                 date_time(2019, 9, 4, 0, 0, 0),
             ],
-            DateTimeRange::parse_date_strs(
-                "2019-09-01",
-                "2019-09-05",
-                "1",
-                "D",
-            )
-            .unwrap()
-            .collect::<Vec<NaiveDateTime>>()
+            DateTimeRange::parse_date_strs("2019-09-01", "2019-09-05", "1", "D",)
+                .unwrap()
+                .collect::<Vec<NaiveDateTime>>()
         )
     }
 
