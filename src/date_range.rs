@@ -4,10 +4,10 @@ use crate::errors::{AppError, AppResult};
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use std::cmp::min;
 
-static DATE_FORMAT: &'static str = "%Y-%m-%d";
-static DATE_TIME_FORMAT: &'static str = "%Y-%m-%dT%H:%M:%S";
+static DATE_FORMAT: &str = "%Y-%m-%d";
+static DATE_TIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S";
 
-pub enum DateTimeRange {
+enum DateTimeRange {
     FixedStep(FixedInterval),
     MonthlyStep(MonthlyInterval),
 }

@@ -1,5 +1,4 @@
 use crate::errors::{AppError, AppResult};
-use crate::date_range::{DateTimeRange};
 
 use cdrs::types::value::Value;
 use core::ops::Range;
@@ -11,7 +10,6 @@ use std::iter::Iterator;
 enum QueryValues<'a> {
     IntRange { range: Range<i32>, step: usize },
     Strings(Vec<&'a str>),
-
 }
 
 lazy_static! {
@@ -22,16 +20,6 @@ lazy_static! {
 }
 
 pub type Values = Vec<Value>;
-
-trait GenQueryValues {
-    fn get_values(self) -> Values;
-}
-
-impl<T: Into<Value>, L: Iterator<Item = T>> GenQueryValues for L {
-    fn get_values(self) -> Values {
-        self.map(|x| x.into()).collect()
-    }
-}
 
 fn parse_int_range<'a>(
     from: &'a str,
@@ -80,8 +68,8 @@ fn parse_query_values<'a>(s: &'a str) -> AppResult<QueryValues<'a>> {
 
 fn to_cdrs_values(vals: QueryValues) -> Values {
     match vals {
-        QueryValues::IntRange { range, step } => range.step_by(step).get_values(),
-        QueryValues::Strings(xs) => xs.into_iter().get_values(),
+        QueryValues::IntRange { range, step } => range.step_by(step).map(|x| x.into()).collect(),
+        QueryValues::Strings(xs) => xs.into_iter().map(|x| x.into()).collect(),
     }
 }
 
@@ -261,5 +249,4 @@ mod tests {
     //         items
     //     );
     // }
-
 }
