@@ -1,7 +1,86 @@
 // Refer to https://github.com/kosta/date-iterator/blob/master/src/calendar_duration.rs#L144
+use crate::errors::{AppError, AppResult};
 
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use std::cmp::min;
+
+static DATE_FORMAT: &'static str = "%Y-%m-%d";
+static DATE_TIME_FORMAT: &'static str = "%Y-%m-%dT%H:%M:%S";
+
+pub enum DateTimeRange {
+    FixedStep(FixedInterval),
+    MonthlyStep(MonthlyInterval),
+}
+
+impl DateTimeRange {
+    fn parse(
+        fmt: &str,
+        start: &str,
+        end: &str,
+        step: &str,
+        unit: &str,
+    ) -> AppResult<DateTimeRange> {
+        let start_date = NaiveDateTime::parse_from_str(start, fmt)?;
+        let end_date = NaiveDateTime::parse_from_str(end, fmt)?;
+        let step_n: u32 = step.parse()?;
+
+        let range = if unit == "M" {
+            let current_date = Some(start_date.date());
+            let time_of_day = start_date.time();
+            DateTimeRange::MonthlyStep(MonthlyInterval {
+                current_date,
+                time_of_day,
+                end: end_date,
+                months: step_n,
+            })
+        } else {
+            let duration = match unit {
+                "s" => Duration::seconds(step_n as i64),
+                "m" => Duration::minutes(step_n as i64),
+                "h" => Duration::hours(step_n as i64),
+                "D" => Duration::days(step_n as i64),
+                "W" => Duration::weeks(step_n as i64),
+                _ => return Err(AppError::general("Invalid step unit")),
+            };
+            DateTimeRange::FixedStep(FixedInterval {
+                start: start_date,
+                end: end_date,
+                step: duration,
+            })
+        };
+
+        Ok(range)
+    }
+
+    pub fn parse_date_strs(
+        start: &str,
+        end: &str,
+        step: &str,
+        unit: &str,
+    ) -> AppResult<DateTimeRange> {
+        DateTimeRange::parse(DATE_FORMAT, start, end, step, unit)
+    }
+
+    pub fn parse_date_time_strs(
+        start: &str,
+        end: &str,
+        step: &str,
+        unit: &str,
+    ) -> AppResult<DateTimeRange> {
+        DateTimeRange::parse(DATE_TIME_FORMAT, start, end, step, unit)
+    }
+}
+
+impl Iterator for DateTimeRange {
+    type Item = NaiveDateTime;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            DateTimeRange::FixedStep(x) => x.next(),
+            DateTimeRange::MonthlyStep(x) => x.next(),
+        }
+    }
+}
 
 struct FixedInterval {
     start: NaiveDateTime,
@@ -10,15 +89,7 @@ struct FixedInterval {
 }
 
 impl FixedInterval {
-    pub fn new(start: NaiveDateTime, end: NaiveDateTime, step: Duration) -> Self {
-        FixedInterval { start, end, step }
-    }
-}
-
-impl Iterator for FixedInterval {
-    type Item = NaiveDateTime;
-
-    fn next(&mut self) -> Option<Self::Item> {
+    fn next(&mut self) -> Option<NaiveDateTime> {
         if self.start >= self.end {
             None
         } else {
@@ -37,22 +108,7 @@ struct MonthlyInterval {
 }
 
 impl MonthlyInterval {
-    pub fn new(start: NaiveDateTime, end: NaiveDateTime, months: u32) -> Self {
-        let current_date = Some(start.date());
-        let time_of_day = start.time();
-        MonthlyInterval {
-            current_date,
-            time_of_day,
-            end,
-            months,
-        }
-    }
-}
-
-impl Iterator for MonthlyInterval {
-    type Item = NaiveDateTime;
-
-    fn next(&mut self) -> Option<Self::Item> {
+    fn next(&mut self) -> Option<NaiveDateTime> {
         if let Some(current_date) = self.current_date {
             let current = NaiveDateTime::new(current_date, self.time_of_day);
             if current >= self.end {
@@ -110,11 +166,13 @@ mod tests {
                 date_time(2019, 9, 29, 10, 32, 20),
                 date_time(2019, 10, 13, 10, 32, 20),
             ],
-            FixedInterval::new(
-                date_time(2019, 9, 1, 10, 32, 20),
-                date_time(2019, 10, 15, 10, 32, 20),
-                Duration::weeks(2),
+            DateTimeRange::parse_date_time_strs(
+                "2019-09-01T10:32:20",
+                "2019-10-15T10:32:20",
+                "2",
+                "W",
             )
+            .unwrap()
             .collect::<Vec<NaiveDateTime>>()
         )
     }
@@ -123,16 +181,18 @@ mod tests {
     pub fn test_fixed_interval_range_days() {
         assert_eq!(
             vec![
-                date_time(2019, 9, 1, 10, 32, 20),
-                date_time(2019, 9, 2, 10, 32, 20),
-                date_time(2019, 9, 3, 10, 32, 20),
-                date_time(2019, 9, 4, 10, 32, 20),
+                date_time(2019, 9, 1, 0, 0, 0),
+                date_time(2019, 9, 2, 0, 0, 0),
+                date_time(2019, 9, 3, 0, 0, 0),
+                date_time(2019, 9, 4, 0, 0, 0),
             ],
-            FixedInterval::new(
-                date_time(2019, 9, 1, 10, 32, 20),
-                date_time(2019, 9, 5, 10, 32, 20),
-                Duration::days(1),
+            DateTimeRange::parse_date_strs(
+                "2019-09-01",
+                "2019-09-05",
+                "1",
+                "D",
             )
+            .unwrap()
             .collect::<Vec<NaiveDateTime>>()
         )
     }
@@ -146,11 +206,13 @@ mod tests {
                 date_time(2019, 9, 1, 22, 32, 20),
                 date_time(2019, 9, 2, 4, 32, 20),
             ],
-            FixedInterval::new(
-                date_time(2019, 9, 1, 10, 32, 20),
-                date_time(2019, 9, 2, 10, 31, 20),
-                Duration::hours(6)
+            DateTimeRange::parse_date_time_strs(
+                "2019-09-01T10:32:20",
+                "2019-09-02T10:31:20",
+                "6",
+                "h",
             )
+            .unwrap()
             .collect::<Vec<NaiveDateTime>>()
         )
     }
@@ -166,11 +228,13 @@ mod tests {
                 date_time(2019, 9, 1, 10, 52, 20),
                 date_time(2019, 9, 1, 10, 57, 20),
             ],
-            FixedInterval::new(
-                date_time(2019, 9, 1, 10, 32, 20),
-                date_time(2019, 9, 1, 11, 00, 10),
-                Duration::minutes(5)
+            DateTimeRange::parse_date_time_strs(
+                "2019-09-01T10:32:20",
+                "2019-09-01T11:00:10",
+                "5",
+                "m",
             )
+            .unwrap()
             .collect::<Vec<NaiveDateTime>>()
         )
     }
@@ -179,21 +243,25 @@ mod tests {
     pub fn test_fixed_interval_range_edge_cases() {
         assert_eq!(
             None,
-            FixedInterval::new(
-                date_time(2019, 9, 1, 10, 32, 20),
-                date_time(2019, 9, 1, 10, 32, 20),
-                Duration::hours(1),
+            DateTimeRange::parse_date_time_strs(
+                "2019-09-01T10:32:20",
+                "2019-09-01T10:32:20",
+                "1",
+                "h",
             )
+            .unwrap()
             .next()
         );
 
         assert_eq!(
             None,
-            FixedInterval::new(
-                date_time(2019, 9, 1, 10, 32, 20),
-                date_time(2019, 9, 1, 10, 30, 20),
-                Duration::hours(1),
+            DateTimeRange::parse_date_time_strs(
+                "2019-09-01T10:32:20",
+                "2019-09-01T10:30:20",
+                "1",
+                "h",
             )
+            .unwrap()
             .next()
         )
     }
@@ -209,13 +277,14 @@ mod tests {
                 date_time(2020, 1, 2, 10, 32, 20),
                 date_time(2020, 2, 2, 10, 32, 20),
             ],
-            MonthlyInterval::new(
-                date_time(2019, 9, 2, 10, 32, 20),
-                date_time(2020, 2, 3, 9, 0, 10),
-                1,
+            DateTimeRange::parse_date_time_strs(
+                "2019-09-02T10:32:20",
+                "2020-02-03T09:00:10",
+                "1",
+                "M",
             )
+            .unwrap()
             .collect::<Vec<NaiveDateTime>>()
         )
     }
-
 }

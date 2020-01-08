@@ -7,6 +7,7 @@ use std::error::Error;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::num::ParseIntError;
 use std::result::Result;
+use chrono::ParseError as DateTimeParseError;
 
 #[derive(Debug)]
 pub enum AppError {
@@ -14,6 +15,7 @@ pub enum AppError {
     InvalidInt(ParseIntError),
     QueryFailure(CDRSError),
     JsonError(JsonError),
+    DateTimeError(DateTimeParseError),
 }
 
 pub type AppResult<T> = Result<T, AppError>;
@@ -30,6 +32,7 @@ impl Display for AppError {
             AppError::InvalidInt(ref err) => write!(f, "Invalid integer: {}", err),
             AppError::QueryFailure(ref err) => write!(f, "Query failed: {}", err),
             AppError::JsonError(ref err) => write!(f, "JSON error: {}", err),
+            AppError::DateTimeError(ref err) => write!(f, "Date time error: {}", err),
             AppError::General(ref msg) => write!(f, "Error: {}", msg),
         }
     }
@@ -41,6 +44,7 @@ impl Error for AppError {
             AppError::InvalidInt(ref err) => Some(err),
             AppError::QueryFailure(ref err) => Some(err),
             AppError::JsonError(ref err) => Some(err),
+            AppError::DateTimeError(ref err) => Some(err),
             _ => None,
         }
     }
@@ -61,5 +65,11 @@ impl From<CDRSError> for AppError {
 impl From<JsonError> for AppError {
     fn from(err: JsonError) -> Self {
         AppError::JsonError(err)
+    }
+}
+
+impl From<DateTimeParseError> for AppError {
+    fn from(err: DateTimeParseError) -> Self {
+        AppError::DateTimeError(err)
     }
 }
