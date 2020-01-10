@@ -1,3 +1,4 @@
+extern crate ansi_term;
 extern crate bigdecimal;
 extern crate cdrs;
 extern crate chrono;
@@ -7,9 +8,11 @@ extern crate itertools;
 extern crate serde;
 extern crate serde_json;
 extern crate uuid;
-extern crate ansi_term;
+#[macro_use]
+extern crate lazy_static;
 
 mod core;
+mod date_range;
 mod errors;
 mod future_utils;
 mod params;
@@ -74,7 +77,7 @@ fn run() -> AppResult<()> {
 
     let query = matches
         .value_of("query")
-        .ok_or(AppError::general("query is required"))?;
+        .ok_or_else(|| AppError::general("query is required"))?;
 
     let param_values = matches
         .values_of("param")
