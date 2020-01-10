@@ -4,27 +4,25 @@ use crate::errors::{AppError, AppResult};
 use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use std::cmp::min;
 
-const DATE_FORMAT: &str = "%Y-%m-%d";
-const DATE_TIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S";
+pub const DATE_FORMAT: &str = "%Y-%m-%d";
+pub const DATE_TIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S";
 
-enum DateTimeRange {
+#[derive(Debug, PartialEq)]
+pub enum DateTimeRange {
     FixedStep(FixedInterval),
     MonthlyStep(MonthlyInterval),
 }
 
 impl DateTimeRange {
-    fn parse(
-        fmt: &str,
-        start: &str,
-        end: &str,
+    fn new_date_time_range(
+        start: NaiveDateTime,
+        end: NaiveDateTime,
         step: &str,
         unit: &str,
     ) -> AppResult<DateTimeRange> {
-        let start = NaiveDateTime::parse_from_str(start, fmt)?;
-        let end = NaiveDateTime::parse_from_str(end, fmt)?;
         let step_n: u32 = step.parse()?;
 
-        let range = if unit == "M" {
+        let range = if unit == "m" {
             let current_date = Some(start.date());
             let time_of_day = start.time();
             DateTimeRange::MonthlyStep(MonthlyInterval {
@@ -35,11 +33,11 @@ impl DateTimeRange {
             })
         } else {
             let step = match unit {
-                "s" => Duration::seconds(step_n as i64),
-                "m" => Duration::minutes(step_n as i64),
-                "h" => Duration::hours(step_n as i64),
-                "D" => Duration::days(step_n as i64),
-                "W" => Duration::weeks(step_n as i64),
+                "S" => Duration::seconds(step_n as i64),
+                "M" => Duration::minutes(step_n as i64),
+                "H" => Duration::hours(step_n as i64),
+                "d" => Duration::days(step_n as i64),
+                "w" => Duration::weeks(step_n as i64),
                 _ => return Err(AppError::general("Invalid step unit")),
             };
             DateTimeRange::FixedStep(FixedInterval { start, end, step })
@@ -54,7 +52,9 @@ impl DateTimeRange {
         step: &str,
         unit: &str,
     ) -> AppResult<DateTimeRange> {
-        DateTimeRange::parse(DATE_FORMAT, start, end, step, unit)
+        let start = NaiveDate::parse_from_str(start, DATE_FORMAT)?.and_hms(0, 0, 0);
+        let end = NaiveDate::parse_from_str(end, DATE_FORMAT)?.and_hms(0, 0, 0);
+        DateTimeRange::new_date_time_range(start, end, step, unit)
     }
 
     pub fn parse_date_time_strs(
@@ -63,7 +63,9 @@ impl DateTimeRange {
         step: &str,
         unit: &str,
     ) -> AppResult<DateTimeRange> {
-        DateTimeRange::parse(DATE_TIME_FORMAT, start, end, step, unit)
+        let start = NaiveDateTime::parse_from_str(start, DATE_TIME_FORMAT)?;
+        let end = NaiveDateTime::parse_from_str(end, DATE_TIME_FORMAT)?;
+        DateTimeRange::new_date_time_range(start, end, step, unit)
     }
 }
 
@@ -78,7 +80,8 @@ impl Iterator for DateTimeRange {
     }
 }
 
-struct FixedInterval {
+#[derive(Debug, PartialEq)]
+pub struct FixedInterval {
     start: NaiveDateTime,
     end: NaiveDateTime,
     step: Duration,
@@ -96,7 +99,8 @@ impl FixedInterval {
     }
 }
 
-struct MonthlyInterval {
+#[derive(Debug, PartialEq)]
+pub struct MonthlyInterval {
     current_date: Option<NaiveDate>,
     time_of_day: NaiveTime,
     end: NaiveDateTime,
@@ -166,7 +170,7 @@ mod tests {
                 "2019-09-01T10:32:20",
                 "2019-10-15T10:32:20",
                 "2",
-                "W",
+                "w",
             )
             .unwrap()
             .collect::<Vec<NaiveDateTime>>()
@@ -182,7 +186,7 @@ mod tests {
                 date_time(2019, 9, 3, 0, 0, 0),
                 date_time(2019, 9, 4, 0, 0, 0),
             ],
-            DateTimeRange::parse_date_strs("2019-09-01", "2019-09-05", "1", "D",)
+            DateTimeRange::parse_date_strs("2019-09-01", "2019-09-05", "1", "d",)
                 .unwrap()
                 .collect::<Vec<NaiveDateTime>>()
         )
@@ -201,7 +205,7 @@ mod tests {
                 "2019-09-01T10:32:20",
                 "2019-09-02T10:31:20",
                 "6",
-                "h",
+                "H",
             )
             .unwrap()
             .collect::<Vec<NaiveDateTime>>()
@@ -223,7 +227,7 @@ mod tests {
                 "2019-09-01T10:32:20",
                 "2019-09-01T11:00:10",
                 "5",
-                "m",
+                "M",
             )
             .unwrap()
             .collect::<Vec<NaiveDateTime>>()
@@ -238,7 +242,7 @@ mod tests {
                 "2019-09-01T10:32:20",
                 "2019-09-01T10:32:20",
                 "1",
-                "h",
+                "H",
             )
             .unwrap()
             .next()
@@ -250,7 +254,7 @@ mod tests {
                 "2019-09-01T10:32:20",
                 "2019-09-01T10:30:20",
                 "1",
-                "h",
+                "H",
             )
             .unwrap()
             .next()
@@ -272,7 +276,7 @@ mod tests {
                 "2019-09-02T10:32:20",
                 "2020-02-03T09:00:10",
                 "1",
-                "M",
+                "m",
             )
             .unwrap()
             .collect::<Vec<NaiveDateTime>>()

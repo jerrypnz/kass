@@ -1,3 +1,4 @@
+use crate::date_range::{DateTimeRange, DATE_FORMAT, DATE_TIME_FORMAT};
 use crate::errors::{AppError, AppResult};
 
 use cdrs::types::value::Value;
@@ -9,6 +10,7 @@ use std::iter::Iterator;
 #[derive(Debug, PartialEq)]
 enum QueryValues<'a> {
     IntRange { range: Range<i32>, step: usize },
+    DateTimeRange { range: DateTimeRange, fmt: &'a str },
     Strings(Vec<&'a str>),
 }
 
@@ -61,20 +63,37 @@ fn parse_query_values<'a>(s: &'a str) -> AppResult<QueryValues<'a>> {
             matches.get(2).unwrap().as_str(),
             matches.get(3).map(|x| x.as_str()),
         )?)
+    } else if let Some(matches) = DATE_RANGE.captures(s) {
+        let range = DateTimeRange::parse_date_strs(
+            matches.get(1).unwrap().as_str(),
+            matches.get(2).unwrap().as_str(),
+            matches.get(3).unwrap().as_str(),
+            matches.get(4).unwrap().as_str(),
+        )?;
+        let fmt = matches.get(5).map_or(DATE_FORMAT, |x| x.as_str());
+        Ok(QueryValues::DateTimeRange { range, fmt })
+    } else if let Some(matches) = DATE_TIME_RANGE.captures(s) {
+        let range = DateTimeRange::parse_date_time_strs(
+            matches.get(1).unwrap().as_str(),
+            matches.get(2).unwrap().as_str(),
+            matches.get(3).unwrap().as_str(),
+            matches.get(4).unwrap().as_str(),
+        )?;
+        let fmt = matches.get(5).map_or(DATE_TIME_FORMAT, |x| x.as_str());
+        Ok(QueryValues::DateTimeRange { range, fmt })
     } else {
         Ok(QueryValues::Strings(comma_separated(s)))
     }
-    // else if let Some(matches) = DATE_RANGE.captures(s) {
-
-    // } else if let Some(matches) = DATE_TIME_RANGE.captures(s) {
-
-    // }
 }
 
 fn to_cdrs_values(vals: QueryValues) -> Values {
     match vals {
         QueryValues::IntRange { range, step } => range.step_by(step).map_into().collect(),
         QueryValues::Strings(xs) => xs.into_iter().map_into().collect(),
+        QueryValues::DateTimeRange { range, fmt } => range
+            .map(|x| x.format(fmt).to_string())
+            .map_into()
+            .collect(),
     }
 }
 
