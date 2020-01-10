@@ -89,7 +89,7 @@ impl FixedInterval {
         if self.start >= self.end {
             None
         } else {
-            let current = self.start.clone();
+            let current = self.start;
             self.start += self.step;
             Some(current)
         }
@@ -110,7 +110,7 @@ impl MonthlyInterval {
             if current >= self.end {
                 None
             } else {
-                self.current_date = add_months_naive_date(&current_date, self.months);
+                self.current_date = add_months_naive_date(current_date, self.months);
                 Some(current)
             }
         } else {
@@ -130,7 +130,7 @@ fn last_day_of_month(year: i32, month: u32) -> u32 {
         .day()
 }
 
-fn add_months_naive_date(date: &NaiveDate, months: u32) -> Option<NaiveDate> {
+fn add_months_naive_date(date: NaiveDate, months: u32) -> Option<NaiveDate> {
     let next_month_0 = (date.month0() as i64).checked_add(months as i64)?;
     let additional_years = next_month_0 / 12;
     let next_month_0 = (next_month_0 % 12) as u32;

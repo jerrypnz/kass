@@ -154,7 +154,7 @@ impl ColValue {
         }
     }
 
-    pub fn as_map_key(self) -> CDRSResult<String> {
+    pub fn into_map_key(self) -> CDRSResult<String> {
         match self {
             ColValue::String(x) => Ok(x),
             ColValue::Int(x) => Ok(x.to_string()),
@@ -172,8 +172,8 @@ impl ColValue {
 }
 
 fn to_time(t: i64) -> NaiveTime {
-    let secs: u32 = (t / 1000_000_000).try_into().unwrap_or(0);
-    let nano: u32 = (t % 1000_000_000).try_into().unwrap_or(0);
+    let secs: u32 = (t / 1_000_000_000).try_into().unwrap_or(0);
+    let nano: u32 = (t % 1_000_000_000).try_into().unwrap_or(0);
     NaiveTime::from_num_seconds_from_midnight(secs, nano)
 }
 
@@ -186,7 +186,7 @@ fn to_datetime(t: i64) -> DateTime<Utc> {
     Utc.timestamp_millis(t)
 }
 
-fn to_seq(meta: &Option<ColTypeOptionValue>, data: &Vec<CBytes>) -> CDRSResult<Vec<ColValue>> {
+fn to_seq(meta: &Option<ColTypeOptionValue>, data: &[CBytes]) -> CDRSResult<Vec<ColValue>> {
     match meta {
         Some(ColTypeOptionValue::CList(elem_type)) | Some(ColTypeOptionValue::CSet(elem_type)) => {
             data.iter()
@@ -199,12 +199,12 @@ fn to_seq(meta: &Option<ColTypeOptionValue>, data: &Vec<CBytes>) -> CDRSResult<V
 
 fn to_map(
     meta: &Option<ColTypeOptionValue>,
-    data: &Vec<(CBytes, CBytes)>,
+    data: &[(CBytes, CBytes)],
 ) -> CDRSResult<HashMap<String, ColValue>> {
     if let Some(ColTypeOptionValue::CMap((key_meta, value_meta))) = meta {
         data.iter()
             .map(|(k, v)| {
-                let key = ColValue::decode(key_meta, k)?.as_map_key()?;
+                let key = ColValue::decode(key_meta, k)?.into_map_key()?;
                 let value = ColValue::decode(value_meta, v)?;
                 Ok((key, value))
             })

@@ -152,7 +152,7 @@ fn format_json<F: Formatter>(formatter: F, json: &JsonValue, color: ColorMode) -
     Ok(fmt.to_colored_json(json, color)?)
 }
 
-fn write_row(meta: &RowsMetadata, row: &Vec<CBytes>, config: &Config) {
+fn write_row(meta: &RowsMetadata, row: &[CBytes], config: &Config) {
     let result = row_to_json(meta, row)
         .and_then(|x| {
             if config.pretty {
@@ -169,15 +169,13 @@ fn write_row(meta: &RowsMetadata, row: &Vec<CBytes>, config: &Config) {
     }
 }
 
-fn row_to_json(meta: &RowsMetadata, row: &Vec<CBytes>) -> AppResult<JsonValue> {
-    let mut i = 0;
+fn row_to_json(meta: &RowsMetadata, row: &[CBytes]) -> AppResult<JsonValue> {
     let mut obj = Map::with_capacity(meta.columns_count as usize);
 
-    for col in &meta.col_specs {
+    for (i, col) in meta.col_specs.iter().enumerate() {
         let name = col.name.as_plain();
         let value = ColValue::decode(&col.col_type, &row[i])?;
         obj.insert(name, serde_json::to_value(value)?);
-        i = i + 1;
     }
     Ok(JsonValue::Object(obj))
 }

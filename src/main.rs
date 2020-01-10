@@ -77,7 +77,7 @@ fn run() -> AppResult<()> {
 
     let query = matches
         .value_of("query")
-        .ok_or(AppError::general("query is required"))?;
+        .ok_or_else(|| AppError::general("query is required"))?;
 
     let param_values = matches
         .values_of("param")

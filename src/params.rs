@@ -13,9 +13,15 @@ enum QueryValues<'a> {
 }
 
 lazy_static! {
-    static ref INT_RANGE: Regex = Regex::new(r"^(\d+)\.\.(\d+)(?:/(\d+)(?:/(int|smallint|tinyint|bigint))?)?$").unwrap();
-    static ref DATE_RANGE: Regex = Regex::new(r"^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})(?:/(\d+)([mdw])(?:/([a-zA-Z%\-/]+))?)?$").unwrap();
-    static ref DATE_TIME_RANGE: Regex = Regex::new(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\.\.(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:/(\d+)([mdwHMS])(?:/([a-zA-Z%\-/:]+))?)?$").unwrap();
+    static ref INT_RANGE: Regex = Regex::new(
+        r"^(\d+)\.\.(\d+)(?:/(\d+)(?:/(int|smallint|tinyint|bigint))?)?$"
+    ).unwrap();
+    static ref DATE_RANGE: Regex = Regex::new(
+        r"^(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})(?:/(\d+)([mdw])(?:/([a-zA-Z%\-/]+))?)?$"
+    ).unwrap();
+    static ref DATE_TIME_RANGE: Regex = Regex::new(
+        r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\.\.(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:/(\d+)([mdwHMS])(?:/([a-zA-Z%\-/:]+))?)?$"
+    ).unwrap();
     //static ref COMMA_SEPARATED: Regex = Regex::new(r#"(?:^|,)(?=[^"]|(")?)"?((?(1)[^"]*|[^,"]*))"?(?=,|$)"#).unwrap();
 }
 
@@ -55,15 +61,14 @@ fn parse_query_values<'a>(s: &'a str) -> AppResult<QueryValues<'a>> {
             matches.get(2).unwrap().as_str(),
             matches.get(3).map(|x| x.as_str()),
         )?)
+    } else {
+        Ok(QueryValues::Strings(comma_separated(s)))
     }
     // else if let Some(matches) = DATE_RANGE.captures(s) {
 
     // } else if let Some(matches) = DATE_TIME_RANGE.captures(s) {
 
     // }
-    else {
-        Ok(QueryValues::Strings(comma_separated(s)))
-    }
 }
 
 fn to_cdrs_values(vals: QueryValues) -> Values {
