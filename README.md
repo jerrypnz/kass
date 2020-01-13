@@ -1,6 +1,7 @@
 ## Kass
 
 ![](https://github.com/jerrypnz/kass/workflows/build/badge.svg)
+![](http://meritbadge.herokuapp.com/kass)](https://crates.io/crates/kass)
 
 Command line Cassandra query runner that supports walking and querying
 multiple partitions using a simple syntax. Results are printed as JSON
