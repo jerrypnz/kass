@@ -1,6 +1,21 @@
-### CQL
+## Kass
 
-Command line Cassandra client that supports CSV, JSON and other bells
-and whistles.
+![](https://github.com/jerrypnz/kass/workflows/build/badge.svg)
 
-Currently work in progress.
+Command line Cassandra query runner that supports walking and querying
+multiple partitions using a simple syntax. Results are rendered as
+simple JSON objects that are friendly to tools like `jq`.
+
+### Installation
+
+TBD
+
+
+### Usage
+
+TBD
+
+
+### Examples
+
+TBD
