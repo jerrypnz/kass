@@ -22,9 +22,9 @@ use self::clap::{App, AppSettings, Arg};
 use self::errors::{AppError, AppResult};
 
 fn app() -> App<'static, 'static> {
-    App::new("CQL")
+    App::new("Kass")
         .version("0.1.0")
-        .about("Command line Cassandra CQL client")
+        .about("Cassandra multi-partition query runner")
         .setting(AppSettings::TrailingVarArg)
         .setting(AppSettings::UnifiedHelpMessage)
         .setting(AppSettings::ColoredHelp)
