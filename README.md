@@ -26,11 +26,13 @@ where `bin` is a date string like `2020-01-13`.
 You can run multiple queries against all target partitions like this:
 
 ``` shell
-kass -h localhost "select bin, country, count(*) from user_click where bin=? and country=? and url='http://myawsome-web-product.com/landing.html'" \
+$ kass -h localhost \
+"select bin, country, count(*) from mydb.user_click
+ where bin=? and country=? and url='http://myawsome-web-product.com/landing.html'" \
 2019-12-01..2020-01-10/1d nz,us,au,cn
 ```
 
-This will query the `user_click` table for the counts of user clicks
+This will query the `mydb.user_click` table for the counts of user clicks
 of the specified URL from countries NZ, US, AU and CN, between
 2019-12-01 and 2020-01-10. It walks through all the combinations of
 the provided dates (as specified by the range) and countries (comma
@@ -40,7 +42,7 @@ separated list) and runs queries against these partitions in parallel
 Results are encoded in JSON for easier post-processing,
 e.g. aggregation using `jq`.
 
-``` json
+```json
 {"bin":"2019-12-01","country":"au","count":1}
 {"bin":"2019-12-01","country":"us","count":2}
 {"bin":"2019-12-01","country":"cn","count":1}
