@@ -3,7 +3,6 @@ use std::convert::TryInto;
 use std::net::IpAddr;
 use std::result::Result;
 
-use bigdecimal;
 use cdrs::error::{Error as CDRSError, Result as CDRSResult};
 use cdrs::frame::frame_result::{ColType, ColTypeOption, ColTypeOptionValue};
 use cdrs::types::data_serialization_types::*;
@@ -12,7 +11,6 @@ use cdrs::types::CBytes;
 use chrono::{DateTime, NaiveDate, NaiveTime, TimeZone, Utc};
 use itertools::Itertools;
 use serde::{Serialize, Serializer};
-use uuid;
 
 // Uuid wrapper struct for implementing `Serialize` trait
 pub struct Uuid(uuid::Uuid);
