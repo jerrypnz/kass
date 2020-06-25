@@ -14,13 +14,13 @@ edition = "2018"
 
 [dependencies]
 itertools = "0.8"
-cdrs = "2.2.4"
+cdrs = "2"
 clap = "2"
 serde_json = { version = "1", features = ["preserve_order"] }
 serde = { version = "1", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 futures = { version = "0.3", features = ["thread-pool"] }
-uuid = "0.8.1"
+uuid = "0.8"
 bigdecimal = "0.1"
 colored_json = "2"
 ansi_term = "0.12"
