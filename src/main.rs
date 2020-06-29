@@ -16,6 +16,7 @@ mod date_range;
 mod errors;
 mod future_utils;
 mod params;
+mod iterator_consumer;
 mod types;
 
 use self::clap::{App, AppSettings, Arg};
