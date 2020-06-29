@@ -13,9 +13,9 @@ use cdrs::load_balancing::RoundRobinSync;
 use cdrs::query::*;
 use cdrs::types::CBytes;
 use clap::ArgMatches;
-use colored_json::{ColoredFormatter, Styler, ColorMode, Output};
+use colored_json::{ColorMode, ColoredFormatter, Output, Styler};
 use futures::executor::{block_on, ThreadPoolBuilder};
-use serde_json::ser::{Formatter, CompactFormatter, PrettyFormatter};
+use serde_json::ser::{CompactFormatter, Formatter, PrettyFormatter};
 use serde_json::{Map, Value as JsonValue};
 
 use crate::errors::AppResult;
@@ -140,7 +140,11 @@ fn write_results(resp: &Frame, config: &Config) -> AppResult<()> {
     Ok(())
 }
 
-fn format_json<F: Formatter>(formatter: F, json: &JsonValue, color: ColorMode) -> AppResult<String> {
+fn format_json<F: Formatter>(
+    formatter: F,
+    json: &JsonValue,
+    color: ColorMode,
+) -> AppResult<String> {
     let styler = Styler {
         integer_value: Style::new().fg(Colour::Yellow),
         float_value: Style::new().fg(Colour::Yellow),
@@ -153,14 +157,13 @@ fn format_json<F: Formatter>(formatter: F, json: &JsonValue, color: ColorMode) -
 }
 
 fn write_row(meta: &RowsMetadata, row: &[CBytes], config: &Config) {
-    let result = row_to_json(meta, row)
-        .and_then(|x| {
-            if config.pretty {
-                format_json(PrettyFormatter::new(), &x, config.color)
-            } else {
-                format_json(CompactFormatter{}, &x, config.color)
-            }
-        });
+    let result = row_to_json(meta, row).and_then(|x| {
+        if config.pretty {
+            format_json(PrettyFormatter::new(), &x, config.color)
+        } else {
+            format_json(CompactFormatter {}, &x, config.color)
+        }
+    });
 
     match result {
         Ok(json) => println!("{}", json),
