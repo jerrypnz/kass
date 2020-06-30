@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::Duration;
 
 use ansi_term::{Colour, Style};
@@ -14,12 +13,11 @@ use cdrs::query::*;
 use cdrs::types::CBytes;
 use clap::ArgMatches;
 use colored_json::{ColorMode, ColoredFormatter, Output, Styler};
-use futures::executor::{block_on, ThreadPoolBuilder};
 use serde_json::ser::{CompactFormatter, Formatter, PrettyFormatter};
 use serde_json::{Map, Value as JsonValue};
 
 use crate::errors::AppResult;
-use crate::future_utils::{self, SpawnFuture};
+use crate::iterator_consumer::IteratorConsumer;
 use crate::params;
 use crate::types::ColValue;
 
@@ -103,24 +101,10 @@ fn parallel_query(
     config: Config,
 ) -> AppResult<()> {
     let prepared = session.prepare(cql)?;
-    let session = Arc::new(session);
-    let config = Arc::new(config);
 
-    let mut pool = ThreadPoolBuilder::new()
-        .pool_size(config.parallelism)
-        .create()
-        .expect("Failed to create thread pool");
-
-    let fut = future_utils::traverse(vals, |vs| {
-        let sess = session.clone();
-        let q = prepared.clone();
-        let conf = config.clone();
-        pool.spawn_future(move || prepared_query(&sess, &q, vs, &conf))
-    });
-
-    block_on(fut)?;
-
-    Ok(())
+    vals.into_iter().consume(config.parallelism, move |vs| {
+        prepared_query(&session, &prepared, vs, &config)
+    })
 }
 
 fn simple_query(session: &CurrentSession, cql: &str, config: &Config) -> AppResult<()> {

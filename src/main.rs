@@ -3,7 +3,6 @@ extern crate bigdecimal;
 extern crate cdrs;
 extern crate chrono;
 extern crate clap;
-extern crate futures;
 extern crate itertools;
 extern crate serde;
 extern crate serde_json;
@@ -14,8 +13,8 @@ extern crate lazy_static;
 mod core;
 mod date_range;
 mod errors;
-mod future_utils;
 mod params;
+mod iterator_consumer;
 mod types;
 
 use self::clap::{App, AppSettings, Arg};
@@ -77,7 +76,7 @@ fn run() -> AppResult<()> {
 
     let query = matches
         .value_of("query")
-        .ok_or_else(|| AppError::general("query is required"))?;
+        .ok_or_else(|| AppError::new("query is required"))?;
 
     let param_values = matches
         .values_of("param")

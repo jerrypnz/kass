@@ -38,7 +38,7 @@ impl DateTimeRange {
                 "H" => Duration::hours(step_n as i64),
                 "d" => Duration::days(step_n as i64),
                 "w" => Duration::weeks(step_n as i64),
-                _ => return Err(AppError::general("Invalid step unit")),
+                _ => return Err(AppError::new("Invalid step unit")),
             };
             DateTimeRange::FixedStep(FixedInterval { start, end, step })
         };

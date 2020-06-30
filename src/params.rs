@@ -37,10 +37,7 @@ fn parse_int_range<'a>(
     let from = from.parse::<i32>()?;
     let to = to.parse::<i32>()?;
     if from >= to {
-        Err(AppError::General(format!(
-            "range start {} is greater/equal to range end {}",
-            from, to
-        )))
+        Err(AppError::new(format!("range start {} is greater/equal to range end {}", from, to)))
     } else {
         let range = from..to;
         let step = if let Some(step) = step {
