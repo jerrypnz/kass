@@ -15,7 +15,7 @@ pub struct AppError(String);
 pub type AppResult<T> = Result<T, AppError>;
 
 impl AppError {
-    pub fn general<T: Into<String>>(msg: T) -> AppError {
+    pub fn new<T: Into<String>>(msg: T) -> AppError {
         AppError(msg.into())
     }
 }
