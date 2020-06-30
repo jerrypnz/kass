@@ -4,6 +4,12 @@ use std::thread;
 use std::thread::JoinHandle;
 
 pub trait IteratorConsumer: Iterator {
+
+    /// Consume the `Iterator` by calling `f` using `n` threads.  `f`
+    /// should take one item, execute some action and return the
+    /// result. If there is an error, the whole process is aborted
+    /// (processing of items at the same time by other threads won't
+    /// be aborted) and the error is returned.
     fn consume<E, F>(mut self, n: usize, f: F) -> Result<(), E>
     where
         Self: Send + Sized + 'static,
@@ -12,7 +18,7 @@ pub trait IteratorConsumer: Iterator {
         F: Fn(Self::Item) -> Result<(), E> + Send + Sync + 'static,
     {
         assert!(n > 0, "n must be positive");
-        let pre_assigned: Vec<Self::Item> = self.by_ref().take(n).collect();
+        let pre_assigned = self.by_ref().take(n).collect_vec();
         let queue = Arc::new(Mutex::new(self));
         let error: Arc<RwLock<Option<E>>> = Arc::new(RwLock::new(None));
         let action = Arc::new(f);
