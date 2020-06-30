@@ -8,7 +8,7 @@ pub trait IteratorConsumer: Iterator {
     where
         Self: Send + Sized + 'static,
         Self::Item: Send + 'static,
-        E: Send + Sync + Copy + 'static,
+        E: Send + Sync + Clone + 'static,
         F: Fn(Self::Item) -> Result<(), E> + Send + Sync + 'static,
     {
         assert!(n > 0, "n must be positive");
@@ -27,7 +27,7 @@ pub trait IteratorConsumer: Iterator {
         }
 
         let res = error.read().unwrap();
-        res.map_or(Ok(()), Err)
+        res.as_ref().map_or(Ok(()), |x| Err(x.clone()))
     }
 }
 
@@ -42,7 +42,7 @@ fn spawn_worker<I, T, E, F>(
 where
     T: Send + 'static,
     I: Iterator<Item = T> + Send + 'static,
-    E: Send + Sync + Copy + 'static,
+    E: Send + Sync + Clone + 'static,
     F: Fn(T) -> Result<(), E> + Send + Sync + 'static,
 {
     thread::spawn(move || {
