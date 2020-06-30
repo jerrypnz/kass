@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::Duration;
 
 use ansi_term::{Colour, Style};
@@ -102,8 +101,6 @@ fn parallel_query(
     config: Config,
 ) -> AppResult<()> {
     let prepared = session.prepare(cql)?;
-    let session = Arc::new(session);
-    let config = Arc::new(config);
 
     vals.into_iter().consume(config.parallelism, move |vs| {
         prepared_query(&session, &prepared, vs, &config)
